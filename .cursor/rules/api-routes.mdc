@@ -1,0 +1,14 @@
+---
+description: API route handlers — validation and Prisma usage
+globs: src/app/api/**/*.ts
+alwaysApply: false
+---
+
+# API routes (`src/app/api`)
+
+- Export named functions: `GET`, `POST`, `PATCH`, `DELETE` as needed.
+- Use `NextRequest` when reading search params or headers.
+- Parse JSON with `await request.json()`; validate with Zod for non-trivial payloads.
+- Use shared `db` from `@/lib/db` — do not instantiate new Prisma clients per request.
+- Return errors as JSON: `Response.json({ error: "..." }, { status: 4xx|5xx })`.
+- Keep side effects (queue dispatch, webhooks) idempotent or guarded where duplicates are possible.

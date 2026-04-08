@@ -1,0 +1,294 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Agent Definitions ──────────────────────────────────────────────
+
+model Agent {
+  id          String   @id @default(cuid())
+  slug        String   @unique // chief-of-staff, pulse, scribe, closer, scout, creator, ghost, echo
+  name        String
+  description String
+  role        String   // router, monitor, transcriber, crm, research, content, prep, memory
+  status      AgentStatus @default(IDLE)
+  config      Json     @default("{}")  // inputs, tools, output schema, approval rules, retry policy
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  runs          AgentRun[]
+  scheduledJobs ScheduledJob[]
+  approvals     Approval[]
+  alerts        Alert[]
+}
+
+enum AgentStatus {
+  IDLE
+  RUNNING
+  ERROR
+  DISABLED
+}
+
+// ─── Agent Runs (audit log) ─────────────────────────────────────────
+
+model AgentRun {
+  id          String    @id @default(cuid())
+  agentId     String
+  agent       Agent     @relation(fields: [agentId], references: [id])
+  status      RunStatus @default(QUEUED)
+  trigger     String    // cron, webhook, manual, agent-handoff
+  input       Json      @default("{}")
+  output      Json?     // structured JSON result
+  markdown    String?   // optional rendered markdown
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  durationMs  Int?
+  createdAt   DateTime  @default(now())
+
+  approvals   Approval[]
+
+  @@index([agentId, createdAt])
+  @@index([status])
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  WAITING_APPROVAL
+  COMPLETED
+  FAILED
+}
+
+// ─── Scheduled Jobs (cron) ──────────────────────────────────────────
+
+model ScheduledJob {
+  id          String   @id @default(cuid())
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id])
+  name        String
+  cron        String   // cron expression
+  timezone    String   @default("America/New_York")
+  enabled     Boolean  @default(true)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  config      Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled, nextRunAt])
+}
+
+// ─── Approvals ──────────────────────────────────────────────────────
+
+model Approval {
+  id          String         @id @default(cuid())
+  agentId     String
+  agent       Agent          @relation(fields: [agentId], references: [id])
+  runId       String?
+  run         AgentRun?      @relation(fields: [runId], references: [id])
+  type        String         // send-email, post-content, stage-change, outbound-message
+  title       String
+  description String
+  payload     Json           // the thing being approved
+  status      ApprovalStatus @default(PENDING)
+  decidedAt   DateTime?
+  decidedBy   String?
+  note        String?
+  createdAt   DateTime       @default(now())
+
+  @@index([status, createdAt])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+// ─── CRM: Contacts, Companies, Deals ────────────────────────────────
+
+model Contact {
+  id          String   @id @default(cuid())
+  email       String?  @unique
+  name        String
+  phone       String?
+  title       String?
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  source      String?  // inbound, referral, outbound
+  tags        String[] @default([])
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deals       Deal[]
+  meetings    Meeting[]
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String?  @unique
+  industry    String?
+  size        String?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  contacts    Contact[]
+  deals       Deal[]
+}
+
+model Deal {
+  id          String   @id @default(cuid())
+  title       String
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  stage       String   @default("lead") // lead, qualified, proposal, negotiation, closed-won, closed-lost
+  value       Float?
+  currency    String   @default("USD")
+  score       Int?     // 0-100 deal health score
+  nextAction  String?
+  closeDate   DateTime?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([stage])
+  @@index([score])
+}
+
+// ─── Meetings & Transcripts ─────────────────────────────────────────
+
+model Meeting {
+  id          String   @id @default(cuid())
+  title       String
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  scheduledAt DateTime
+  duration    Int?     // minutes
+  platform    String?  // zoom, google-meet, in-person
+  status      String   @default("scheduled") // scheduled, completed, cancelled
+  notes       String?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  transcript  Transcript?
+}
+
+model Transcript {
+  id          String   @id @default(cuid())
+  meetingId   String   @unique
+  meeting     Meeting  @relation(fields: [meetingId], references: [id])
+  source      String   // sybill, manual, otter
+  rawText     String
+  summary     String?
+  actionItems Json     @default("[]")
+  sentiment   String?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+}
+
+// ─── Content Pipeline ───────────────────────────────────────────────
+
+model ContentBrief {
+  id          String   @id @default(cuid())
+  title       String
+  topic       String
+  platform    String   // tiktok, instagram, linkedin, youtube
+  angle       String?
+  hook        String?
+  source      String?  // scout-finding, manual, trending
+  status      String   @default("idea") // idea, approved, scripted, published
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  scripts     Script[]
+}
+
+model Script {
+  id          String       @id @default(cuid())
+  briefId     String
+  brief       ContentBrief @relation(fields: [briefId], references: [id])
+  version     Int          @default(1)
+  body        String
+  format      String       // short-form, long-form, carousel, thread
+  status      String       @default("draft") // draft, review, approved, published
+  metadata    Json         @default("{}")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// ─── Research ───────────────────────────────────────────────────────
+
+model ResearchBrief {
+  id          String   @id @default(cuid())
+  subject     String
+  type        String   // person, company, market, competitor
+  requestedBy String?  // agent slug or "manual"
+  context     String?  // why this research is needed
+  findings    Json     @default("{}")
+  sources     Json     @default("[]")
+  status      String   @default("pending") // pending, in-progress, completed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── Alerts ─────────────────────────────────────────────────────────
+
+model Alert {
+  id          String   @id @default(cuid())
+  agentId     String?
+  agent       Agent?   @relation(fields: [agentId], references: [id])
+  channel     String   // telegram, slack, dashboard
+  severity    String   @default("info") // info, warning, urgent
+  title       String
+  message     String
+  read        Boolean  @default(false)
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([read, createdAt])
+  @@index([severity])
+}
+
+// ─── Knowledge / Echo Memory ────────────────────────────────────────
+
+model KnowledgeChunk {
+  id          String   @id @default(cuid())
+  source      String   // transcript, blog, podcast, manual
+  sourceId    String?
+  content     String
+  embedding   Float[]  @default([])
+  tags        String[] @default([])
+  confidence  Float    @default(1.0)
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([source])
+}
+
+// ─── Integration Connections ────────────────────────────────────────
+
+model IntegrationConnection {
+  id          String   @id @default(cuid())
+  service     String   @unique // slack, highlevel, telegram, google, sybill, apify, brave, openai, stripe
+  name        String
+  status      String   @default("disconnected") // connected, disconnected, error
+  lastCheck   DateTime?
+  config      Json     @default("{}") // non-secret config
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

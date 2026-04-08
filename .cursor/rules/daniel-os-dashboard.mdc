@@ -1,0 +1,39 @@
+---
+description: Daniel OS Dashboard — stack, layout, and agent registry
+alwaysApply: true
+---
+
+# Daniel OS Dashboard
+
+Command-center Next.js app: sales, meetings, content, research, memory (Echo), agents, runs, approvals, schedules, alerts, integrations.
+
+## Stack
+
+- Next.js App Router (16+), React 19, Tailwind 4
+- Prisma 7 + Postgres (`DATABASE_URL`); client generated to `src/generated/prisma` (run `npm run db:generate`)
+- BullMQ + Redis (`REDIS_URL`) for queues (workers not fully wired in all paths)
+- Clerk may be present; follow existing auth patterns in the repo
+
+## Key paths
+
+| Area | Location |
+|------|----------|
+| Agent definitions (canonical registry) | `src/lib/agents.ts` — `AGENT_DEFINITIONS`; seed syncs from here |
+| DB access | `src/lib/db.ts` — `db` Prisma client |
+| Dashboard shell | `src/app/(dashboard)/layout.tsx`, `src/components/sidebar.tsx` |
+| API routes | `src/app/api/**/route.ts` |
+| Schema | `prisma/schema.prisma` |
+
+## Local port
+
+- Default **3040** (`npm run dev` / `npm run start` use `${PORT:-3040}`). Override: `PORT=3005 npm run dev`.
+
+## Conventions
+
+- Prefer server components for data pages unless client interactivity is required.
+- New API routes: validate body with Zod where inputs vary; return `Response.json` with appropriate status codes.
+- After schema changes: `npm run db:generate` and migrate/push as documented in README.
+
+## Next.js version note
+
+This project may use Next APIs that differ from older training cutoffs. Prefer reading `node_modules/next/dist/docs/` or official Next docs when unsure.
