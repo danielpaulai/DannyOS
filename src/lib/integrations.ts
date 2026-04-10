@@ -49,11 +49,11 @@ export const SERVICE_DETAILS: Record<
     env: ["BRAVE_API_KEY"],
     priority: "growth",
   },
-  openai: {
-    label: "OpenAI",
-    description: "Embeddings and semantic memory retrieval for Echo",
-    env: ["OPENAI_API_KEY"],
-    priority: "advanced",
+  anthropic: {
+    label: "Anthropic",
+    description: "Claude AI for all agent reasoning and intelligence",
+    env: ["ANTHROPIC_API_KEY"],
+    priority: "core",
   },
   stripe: {
     label: "Stripe",
@@ -80,7 +80,7 @@ export const EXPECTED_ENV_KEYS = [
   "GHL_LOCATION_ID",
   "GHL_PIPELINE_ID",
   "GOOGLE_WORKSPACE_ACCOUNT",
-  "OPENAI_API_KEY",
+  "ANTHROPIC_API_KEY",
   "BRAVE_API_KEY",
   "APIFY_API_TOKEN",
   "SYBILL_WEBHOOK_SECRET",

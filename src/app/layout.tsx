@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Daniel OS",
+  title: "Daniel OS — Purely Personal",
   description: "Executive operating system for Daniel's agents, sales, content, and research",
 };
 

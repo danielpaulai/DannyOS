@@ -1,6 +1,6 @@
 "use client";
 
-import { Play } from "lucide-react";
+import { Play, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 export function TriggerButton({
@@ -11,6 +11,7 @@ export function TriggerButton({
   agentName: string;
 }) {
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   async function trigger() {
     setLoading(true);
@@ -20,20 +21,29 @@ export function TriggerButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId }),
       });
+      setDone(true);
+      setTimeout(() => setDone(false), 2000);
     } finally {
       setLoading(false);
-      window.location.reload();
     }
   }
 
   return (
     <button
       onClick={trigger}
-      disabled={loading}
-      title={`Trigger ${agentName}`}
-      className="p-1.5 rounded-md hover:bg-accent/10 text-muted-foreground hover:text-accent transition-colors disabled:opacity-50"
+      disabled={loading || done}
+      title={done ? `${agentName} triggered` : `Trigger ${agentName}`}
+      className={`p-1.5 rounded-lg transition-all disabled:opacity-50 ${
+        done
+          ? "bg-emerald-50 text-emerald-600"
+          : "hover:bg-accent/10 text-muted-foreground hover:text-accent"
+      }`}
     >
-      <Play className="h-3.5 w-3.5" />
+      {loading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Play className="h-3.5 w-3.5" />
+      )}
     </button>
   );
 }

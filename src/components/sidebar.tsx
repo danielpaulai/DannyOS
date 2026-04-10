@@ -20,14 +20,18 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
+import { SignOutButton } from "@/components/sign-out-button";
 
-const NAV_ITEMS = [
+const BUSINESS_NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/sales", label: "Sales", icon: BriefcaseBusiness },
   { href: "/meetings", label: "Meetings", icon: CalendarRange },
   { href: "/content", label: "Content", icon: PenTool },
   { href: "/research", label: "Research", icon: Search },
   { href: "/memory", label: "Memory", icon: Brain },
+];
+
+const SYSTEM_NAV = [
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/runs", label: "Run History", icon: History },
   { href: "/approvals", label: "Approvals", icon: Inbox },
@@ -37,6 +41,55 @@ const NAV_ITEMS = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+function NavItem({
+  item,
+  pathname,
+  collapsed,
+}: {
+  item: { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
+  pathname: string;
+  collapsed: boolean;
+}) {
+  const isActive =
+    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+
+  return (
+    <Link
+      href={item.href}
+      title={collapsed ? item.label : undefined}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150 ${
+        isActive
+          ? "bg-accent/10 text-accent font-semibold"
+          : "text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+      }`}
+      style={{ fontFamily: "'Rethink Sans', sans-serif" }}
+    >
+      <item.icon className="h-4 w-4 shrink-0" />
+      {!collapsed && <span>{item.label}</span>}
+    </Link>
+  );
+}
+
+function NavSection({
+  label,
+  collapsed,
+}: {
+  label: string;
+  collapsed: boolean;
+}) {
+  if (collapsed) {
+    return <div className="mx-3 my-3 border-t border-white/5" />;
+  }
+  return (
+    <p
+      className="px-3 pt-5 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-accent"
+      style={{ fontFamily: "'Rethink Sans', sans-serif" }}
+    >
+      {label}
+    </p>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -44,54 +97,73 @@ export function Sidebar() {
   return (
     <aside
       className={`flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-200 ${
-        collapsed ? "w-16" : "w-60"
+        collapsed ? "w-16" : "w-56"
       }`}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-4 border-b border-white/10">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground font-bold text-sm shrink-0">
-          OC
+      <div className="flex h-14 items-center gap-3 px-4">
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white font-extrabold text-xs shrink-0"
+          style={{ fontFamily: "'Rethink Sans', sans-serif" }}
+        >
+          PP
         </div>
         {!collapsed && (
-          <span className="font-semibold text-sm tracking-tight">OpenClaw</span>
+          <div className="flex flex-col">
+            <span
+              className="font-bold text-sm leading-tight"
+              style={{ fontFamily: "'Rethink Sans', sans-serif" }}
+            >
+              Daniel OS
+            </span>
+            <span className="text-[10px] text-sidebar-foreground/30 leading-tight">
+              Purely Personal
+            </span>
+          </div>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 space-y-1 px-2">
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
+      <nav className="flex-1 overflow-y-auto px-2 pb-2">
+        <NavSection label="Business" collapsed={collapsed} />
+        <div className="space-y-0.5">
+          {BUSINESS_NAV.map((item) => (
+            <NavItem
               key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                isActive
-                  ? "bg-sidebar-accent text-white"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-white"
-              }`}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
+              item={item}
+              pathname={pathname}
+              collapsed={collapsed}
+            />
+          ))}
+        </div>
+
+        <NavSection label="System" collapsed={collapsed} />
+        <div className="space-y-0.5">
+          {SYSTEM_NAV.map((item) => (
+            <NavItem
+              key={item.href}
+              item={item}
+              pathname={pathname}
+              collapsed={collapsed}
+            />
+          ))}
+        </div>
       </nav>
 
-      {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-10 border-t border-white/10 text-sidebar-foreground/50 hover:text-white transition-colors"
-      >
-        {collapsed ? (
-          <ChevronRight className="h-4 w-4" />
-        ) : (
-          <ChevronLeft className="h-4 w-4" />
-        )}
-      </button>
+      {/* Footer */}
+      <div className="border-t border-white/5">
+        {!collapsed && <SignOutButton />}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex w-full items-center justify-center h-9 text-sidebar-foreground/20 hover:text-sidebar-foreground/50 transition-colors"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          )}
+        </button>
+      </div>
     </aside>
   );
 }
