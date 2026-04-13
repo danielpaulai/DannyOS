@@ -17,13 +17,30 @@ export async function complete({
   maxTokens?: number;
   temperature?: number;
 }): Promise<string> {
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: maxTokens,
-    temperature,
-    system,
-    messages: [{ role: "user", content: prompt }],
-  });
+  // Try primary model, fall back to haiku if overloaded
+  let response;
+  try {
+    response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: maxTokens,
+      temperature,
+      system,
+      messages: [{ role: "user", content: prompt }],
+    });
+  } catch (err) {
+    const isOverloaded = err instanceof Error && err.message.includes("overloaded");
+    if (isOverloaded) {
+      response = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: maxTokens,
+        temperature,
+        system,
+        messages: [{ role: "user", content: prompt }],
+      });
+    } else {
+      throw err;
+    }
+  }
 
   const block = response.content[0];
   if (block.type === "text") return block.text;

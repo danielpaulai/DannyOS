@@ -18,11 +18,13 @@ import {
   Brain,
   ChevronLeft,
   ChevronRight,
+  Sun,
 } from "lucide-react";
 import { useState } from "react";
 import { SignOutButton } from "@/components/sign-out-button";
 
 const BUSINESS_NAV = [
+  { href: "/today", label: "Today", icon: Sun },
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/sales", label: "Sales", icon: BriefcaseBusiness },
   { href: "/meetings", label: "Meetings", icon: CalendarRange },
